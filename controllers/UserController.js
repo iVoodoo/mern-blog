@@ -32,6 +32,7 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
   try {
+    console.log(req.body);
     const user = await UserModel.findOne({ email: req.body.email });
 
     if (!user) {

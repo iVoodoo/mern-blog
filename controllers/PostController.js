@@ -4,6 +4,7 @@ export const getAllPosts = async (req, res) => {
   try {
     const posts = await PostModel.find()
       .populate({ path: "author", select: ["fullName", "avatarUrl"] })
+      .sort({ createdAt: "descending" })
       .exec();
     res.json(posts);
   } catch (err) {
@@ -79,7 +80,11 @@ export const deletePost = async (req, res) => {
 export const updatePost = async (req, res) => {
   try {
     const postId = req.params.id;
-
+    const tags = Object.values(req.body.tags);
+    console.log(typeof tags);
+    console.log(tags);
+    const preparedTags = tags.map((item) => item.toLowerCase());
+    console.log(preparedTags);
     await PostModel.updateOne(
       {
         _id: postId,
@@ -88,7 +93,7 @@ export const updatePost = async (req, res) => {
         title: req.body.title,
         text: req.body.text,
         imageUrl: req.body.imageUrl,
-        tags: req.body.tags,
+        tags: preparedTags,
         author: req.userId,
       }
     );
@@ -102,11 +107,12 @@ export const updatePost = async (req, res) => {
 
 export const createPost = async (req, res) => {
   try {
+    const preparedTags = req.body.tags.map((item) => item.toLowerCase());
     const doc = new PostModel({
       title: req.body.title,
       text: req.body.text,
       imageUrl: req.body.imageUrl,
-      tags: req.body.tags,
+      tags: preparedTags,
       author: req.userId,
     });
 
@@ -116,5 +122,36 @@ export const createPost = async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Не удалось создать статью" });
+  }
+};
+
+export const getPopularTags = async (req, res) => {
+  try {
+    const posts = await PostModel.find()
+      .sort({ viewsCount: "descending" })
+      .limit(3)
+      .exec();
+
+    const tags = [...new Set(posts.map((post) => post.tags).flat(Infinity))];
+    res.json(tags);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Не удалось получить тэги" });
+  }
+};
+
+export const getPostsByTag = async (req, res) => {
+  try {
+    const tag = req.params.tag.toLowerCase();
+    const posts = await PostModel.find()
+      .where("tags")
+      .equals(tag)
+      .populate({ path: "author", select: ["fullName", "avatarUrl"] })
+      .sort({ createdAt: "descending" })
+      .exec();
+    res.json(posts);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Не удалось получить статьи" });
   }
 };

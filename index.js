@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import cors from "cors";
 import multer from "multer";
 
 import {
@@ -20,6 +21,7 @@ import {
   updatePost,
 } from "./controllers/index.js";
 import { checkAuth, handleValidationErrors } from "./utils/index.js";
+import { getPopularTags, getPostsByTag } from "./controllers/PostController.js";
 
 mongoose
   .connect(
@@ -39,13 +41,16 @@ const storage = multer.diskStorage({
   },
 
   filename: (_, file, cb) => {
-    cb(null, file.originalname);
+    console.log(file);
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s/g, ""));
   },
 });
 
 const upload = multer({ storage });
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 app.use("/uploads", express.static("uploads"));
 
 app.post("/auth/login", loginValidation, handleValidationErrors, loginUser);
@@ -57,12 +62,14 @@ app.post(
 );
 app.get("/auth/me", checkAuth, getUser);
 
-app.post("/upload", checkAuth, upload.single("image"), (req, res) => {
+app.post("/upload", upload.single("image"), (req, res) => {
   res.json({
-    url: `/uploads/${req.file.originalname}`,
+    url: `/uploads/${req.file.filename}`,
   });
 });
 
+app.get("/tags", getPopularTags);
+app.get("/tag/:tag", getPostsByTag);
 app.get("/posts", getAllPosts);
 app.get("/posts/:id", getSinglePost);
 app.post(
